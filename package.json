@@ -1,23 +1,23 @@
 {
-  "name": "01-node-basics",
+  "name": "02-express",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {
-    "start": "node index",
-    "dev": "nodemon index"
+  "dependencies": {
+    "@hapi/joi": "^17.1.1",
+    "cors": "^2.8.5",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "joi": "^14.3.1",
+    "morgan": "^1.10.0",
+    "nodemon": "^2.0.4",
+    "yargs": "^15.4.0"
   },
-  "repository": {
-    "type": "git",
-    "url": "01-node-basics"
+  "devDependencies": {},
+  "scripts": {
+    "start": "node api/start",
+    "dev": "nodemon api/start.js"
   },
   "author": "ROMAN_MIRGORODSKYI <SMDEILE@GMAIL.COM>",
-  "license": "ISC",
-  "devDependencies": {
-    "nodemon": "^2.0.4"
-  },
-  "dependencies": {
-    "uniqid": "^5.2.0",
-    "yargs": "^15.3.1"
-  }
+  "license": "ISC"
 }
