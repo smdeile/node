@@ -52,4 +52,27 @@ async function addContact({ name, email, phone, id }) {
   }
 }
 
-module.exports = { listContacts, getContactById, removeContact, addContact };
+async function updateContact(reqBody, id) {
+  try {
+    const contacts = await listContacts();
+    const findContact = await contacts.filter((contact) => contact.id === id);
+    const withoutDelContact = contacts.filter((contact) => contact.id !== id);
+    const updateContact = {
+      ...findContact[0],
+      ...reqBody,
+    };
+    withoutDelContact.push(updateContact);
+    await fsPromises.writeFile(contactsPath, JSON.stringify(withoutDelContact));
+    return withoutDelContact;
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+module.exports = {
+  listContacts,
+  getContactById,
+  removeContact,
+  addContact,
+  updateContact,
+};

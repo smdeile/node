@@ -4,7 +4,7 @@ const Joi = require("joi");
 class ContactControllers {
   async getContacts(req, res, next) {
     try {
-      const getContact = await contacts.listContacts();
+      const getContact = await contacts.listContacts().then((data) => data);
       return res.status(200).json(getContact);
     } catch (err) {
       next(err);
@@ -14,7 +14,6 @@ class ContactControllers {
   async getById(req, res, next) {
     try {
       const contactId = parseInt(req.params.contactId);
-      // const findContact = contacts.find((contact) => contact.id === contactId);
       const findContact = await contacts.getContactById(contactId);
       if (findContact.length === 0) {
         return res.status(404).json({ message: "Not found" });
@@ -59,16 +58,13 @@ class ContactControllers {
       if (findContact.length === 0) {
         return res.status(404).send({ message: "Not found" });
       } else {
-        findContact[0] = { ...findContact[0], ...req.body };
-        const getContact = await contacts.listContacts();
-
-        return res.status(200).send(getContact);
+        const getContact = await contacts.updateContact(req.body, contactId);
+        return res.status(200).send(await getContact);
       }
     } catch (err) {
       next(err);
     }
   }
-
   validateUpdateContact(req, res, next) {
     const updateContactRules = Joi.object({
       name: Joi.string(),
