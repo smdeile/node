@@ -30,10 +30,15 @@ module.exports = class UserServer {
     await mongoose.connect(process.env.MONGODB_URL);
   }
 
-  startListening() {
-    const PORT = process.env.PORT;
-    this.server.listen(PORT, () => {
-      console.log("Database connection successful", PORT);
-    });
+  async startListening() {
+    try {
+      const PORT = process.env.PORT;
+      const connection = await this.server.listen(PORT, () => {
+        console.log("Database connection successful", PORT);
+      });
+    } catch (err) {
+      console.log("err", err);
+      process.exit(1);
+    }
   }
 };
