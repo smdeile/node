@@ -1,23 +1,24 @@
 {
-  "name": "02-express",
+  "name": "03-mongodb",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "dependencies": {
-    "@hapi/joi": "^17.1.1",
-    "cors": "^2.8.5",
-    "dotenv": "^8.2.0",
-    "express": "^4.17.1",
-    "joi": "^14.3.1",
-    "morgan": "^1.10.0",
-    "nodemon": "^2.0.4",
-    "yargs": "^15.4.0"
-  },
-  "devDependencies": {},
   "scripts": {
-    "start": "node api/start",
-    "dev": "nodemon api/start.js"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon api_mongoose/start.js"
   },
   "author": "ROMAN_MIRGORODSKYI <SMDEILE@GMAIL.COM>",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "@hapi/joi": "^17.1.1",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "express-validator": "^6.6.0",
+    "got": "^11.5.1",
+    "mongodb": "^3.5.9",
+    "mongoose": "^5.9.25"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.4"
+  }
 }
