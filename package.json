@@ -1,24 +1,9 @@
 {
-  "name": "03-mongodb",
+  "name": "04-auth",
   "version": "1.0.0",
-  "description": "",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon api_mongoose/start.js"
-  },
-  "author": "ROMAN_MIRGORODSKYI <SMDEILE@GMAIL.COM>",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
-    "@hapi/joi": "^17.1.1",
-    "dotenv": "^8.2.0",
-    "express": "^4.17.1",
-    "express-validator": "^6.6.0",
-    "got": "^11.5.1",
-    "mongodb": "^3.5.9",
-    "mongoose": "^5.9.25"
-  },
-  "devDependencies": {
-    "nodemon": "^2.0.4"
+    "bcrypt": "^5.0.0"
   }
 }
