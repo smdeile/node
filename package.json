@@ -1,9 +1,26 @@
 {
   "name": "04-auth",
   "version": "1.0.0",
+  "description": "",
   "main": "index.js",
-  "license": "MIT",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon api_mongoose/start.js"
+  },
+  "author": "ROMAN_MIRGORODSKYI <SMDEILE@GMAIL.COM>",
+  "license": "ISC",
   "dependencies": {
-    "bcrypt": "^5.0.0"
+    "@hapi/joi": "^17.1.1",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "express-validator": "^6.6.0",
+    "got": "^11.5.1",
+    "jsonwebtoken": "^8.5.1",
+    "mongodb": "^3.5.9",
+    "mongoose": "^5.9.25"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.4"
   }
 }
