@@ -5,9 +5,7 @@ const {
 } = require("mongoose");
 const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const {
-  UnauthorizedError,
-} = require("../api_mongoose/helpers/errors.constructor");
+const { UnauthorizedError } = require("../helpers/errors.constructor");
 class UserController {
   constructor() {
     this._costFactor = 4;
