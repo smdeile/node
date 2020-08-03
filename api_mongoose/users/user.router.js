@@ -11,5 +11,10 @@ userRouter.post(
   userController.validateLoginUser,
   userController.loginUser
 );
-userRouter.patch("/logout", userController.authorize, userController.logout);
+userRouter.post("/logout", userController.authorize, userController.logout);
+userRouter.get(
+  "/current",
+  userController.authorize,
+  userController.getCurrentUser
+);
 module.exports = userRouter;

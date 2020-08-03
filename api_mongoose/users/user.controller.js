@@ -10,11 +10,21 @@ class UserController {
   constructor() {
     this._costFactor = 4;
   }
+
   get createUser() {
     return this._createUser.bind(this);
   }
   get loginUser() {
     return this._loginUser.bind(this);
+  }
+  get getCurrentUser() {
+    return this._getCurrentUser.bind(this);
+  }
+
+  async _getCurrentUser(req, res, next) {
+    const [userForResponse] = this.prepareUserResponse([req.user]);
+    console.log(userForResponse);
+    return res.status(200).json(userForResponse);
   }
   async _createUser(req, res, next) {
     try {
@@ -70,8 +80,7 @@ class UserController {
   }
   async logout(req, res, next) {
     try {
-      const user = req.body;
-      console.log("user", user);
+      const user = req.user;
       await userModel.updateToken(user._id, null);
 
       return res.status(204).send();
@@ -79,7 +88,6 @@ class UserController {
       next(err);
     }
   }
-
   async authorize(req, res, next) {
     try {
       // 1. витягнути токен користувача з заголовка Authorization
@@ -106,12 +114,13 @@ class UserController {
       // і передати обробку запиту на наступний middleware
       req.user = user;
       req.token = token;
-
+      console.log("tok", token);
       next();
     } catch (err) {
       next(err);
     }
   }
+
   validateCreateUser(req, res, next) {
     const registrationRules = Joi.object({
       email: Joi.string().required(),
@@ -134,6 +143,12 @@ class UserController {
       return res.status(400).send(validationResult.error.details);
     }
     next();
+  }
+  prepareUserResponse(users) {
+    return users.map((user) => {
+      const { email, subscription } = user;
+      return { email, subscription };
+    });
   }
 }
 module.exports = new UserController();
