@@ -77,7 +77,7 @@ class ContactController {
       const { contactId } = req.params;
 
       const contact = await contactModel.findById({ _id: contactId });
-
+      console.log("contact", contact);
       if (!contact) {
         return res.status(404).send("smth con");
       }
