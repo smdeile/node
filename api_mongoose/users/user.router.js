@@ -1,9 +1,11 @@
 const { Router } = require("express");
+const path = require("path");
 const userRouter = Router();
 const userController = require("./user.controller");
 userRouter.post(
   "/register",
   userController.validateCreateUser,
+  userController.replaceAvatar,
   userController.createUser
 );
 userRouter.post(

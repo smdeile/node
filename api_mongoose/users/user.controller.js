@@ -1,4 +1,8 @@
 const Joi = require("@hapi/joi");
+const Avatar = require("avatar-builder");
+const path = require("path");
+const fs = require("fs");
+
 const userModel = require("./user.model");
 const {
   Types: { ObjectId },
@@ -44,6 +48,7 @@ class UserController {
         user: {
           email: user.email,
           subscription: user.subscription,
+          avatar: user.avatarURL,
         },
       });
     } catch (err) {
@@ -121,6 +126,37 @@ class UserController {
     }
   }
 
+  async replaceAvatar(req, res, next) {
+    console.log("req replace", req.body);
+    const { email } = req.body;
+    const generalAvatar = Avatar.builder(
+      Avatar.Image.margin(Avatar.Image.circleMask(Avatar.Image.identicon())),
+      128,
+      128
+    );
+    const pathAvatar = path.join(__dirname, "tmp", email + ".png");
+    console.log(pathAvatar);
+    const avatar = await generalAvatar
+      .create(email)
+      .then((buffer) => fs.writeFileSync(pathAvatar, buffer));
+
+    const destinationFolder = path.join(
+      __dirname,
+
+      "..",
+      "public/image",
+      email + ".png"
+    );
+    console.log("destinationFolder", destinationFolder);
+
+    fs.copyFile(pathAvatar, destinationFolder, (err) => {
+      if (err) console.log("err", err);
+      console.log("source.txt was copied to destination.txt");
+    });
+    await fs.promises.unlink(pathAvatar);
+
+    next();
+  }
   validateCreateUser(req, res, next) {
     const registrationRules = Joi.object({
       email: Joi.string().required(),
