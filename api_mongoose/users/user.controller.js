@@ -1,7 +1,7 @@
 const Joi = require("@hapi/joi");
 const Avatar = require("avatar-builder");
 const path = require("path");
-const fs = require("fs");
+const fs = require("fs").promises;
 
 const userModel = require("./user.model");
 const {
@@ -30,6 +30,7 @@ class UserController {
     console.log(userForResponse);
     return res.status(200).json(userForResponse);
   }
+
   async _createUser(req, res, next) {
     try {
       const { email, password, subscription, token } = req.body;
@@ -48,18 +49,19 @@ class UserController {
         user: {
           email: user.email,
           subscription: user.subscription,
-          avatar: user.avatarURL,
+          avatar: `http://localhost:3000/images/${user.email}.png`,
         },
       });
     } catch (err) {
       next(err);
     }
   }
+
   async _loginUser(req, res, next) {
     try {
       const { email, password } = req.body;
       const user = await userModel.findUserByEmail(email);
-
+      console.log("user", user);
       if (!user) {
         return res.status(401).send("Email or password is wrong");
       }
@@ -93,8 +95,10 @@ class UserController {
       next(err);
     }
   }
+
   async authorize(req, res, next) {
     try {
+      console.log("Content-Type", req.get("Content-Type"));
       // 1. витягнути токен користувача з заголовка Authorization
       const authorizationHeader = req.get("Authorization");
       const token = authorizationHeader.replace("Bearer ", "");
@@ -119,15 +123,39 @@ class UserController {
       // і передати обробку запиту на наступний middleware
       req.user = user;
       req.token = token;
-      console.log("tok", token);
+
       next();
     } catch (err) {
       next(err);
     }
   }
 
+  async updateAvatar(req, res, next) {
+    try {
+      const user = req.user;
+
+      const userAvatar = await userModel.findUserByEmail(user.email);
+      try {
+        await fs.unlink(userAvatar.avatarURL);
+      } catch (error) {
+        console.log(error.message);
+      }
+
+      const updatedUser = await userModel.findUserByIdAndUpdate(user._id, {
+        avatarURL: req.file.path,
+      });
+
+      if (!updatedUser) {
+        return res.status(404).json("Not Found contact");
+      }
+
+      return res.status(200).json({ avatarURL: updatedUser.avatarURL });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async replaceAvatar(req, res, next) {
-    console.log("req replace", req.body);
     const { email } = req.body;
     const generalAvatar = Avatar.builder(
       Avatar.Image.margin(Avatar.Image.circleMask(Avatar.Image.identicon())),
@@ -135,16 +163,14 @@ class UserController {
       128
     );
     const pathAvatar = path.join(__dirname, "tmp", email + ".png");
-    console.log(pathAvatar);
-    const avatar = await generalAvatar
-      .create(email)
-      .then((buffer) => fs.writeFileSync(pathAvatar, buffer));
+    const avatar = await generalAvatar.create(email);
+    await fs.writeFile(pathAvatar, avatar);
 
     const destinationFolder = path.join(
       __dirname,
 
       "..",
-      "public/image",
+      "public/images",
       email + ".png"
     );
     console.log("destinationFolder", destinationFolder);
@@ -153,10 +179,11 @@ class UserController {
       if (err) console.log("err", err);
       console.log("source.txt was copied to destination.txt");
     });
-    await fs.promises.unlink(pathAvatar);
+    await fs.unlink(pathAvatar);
 
     next();
   }
+
   validateCreateUser(req, res, next) {
     const registrationRules = Joi.object({
       email: Joi.string().required(),

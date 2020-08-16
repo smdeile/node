@@ -15,6 +15,7 @@ const userSchema = new Schema({
 userSchema.statics.findUserByEmail = findUserByEmail;
 userSchema.statics.findUserByIdAndUpdate = findUserByIdAndUpdate;
 userSchema.statics.updateToken = updateToken;
+
 async function findUserByEmail(email) {
   return this.findOne({ email });
 }
