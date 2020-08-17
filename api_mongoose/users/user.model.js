@@ -4,6 +4,7 @@ const { Schema } = mongoose;
 const userSchema = new Schema({
   email: String,
   password: String,
+  avatarURL: String,
   subscription: {
     type: String,
     enum: ["free", "pro", "premium"],
@@ -14,6 +15,7 @@ const userSchema = new Schema({
 userSchema.statics.findUserByEmail = findUserByEmail;
 userSchema.statics.findUserByIdAndUpdate = findUserByIdAndUpdate;
 userSchema.statics.updateToken = updateToken;
+
 async function findUserByEmail(email) {
   return this.findOne({ email });
 }
