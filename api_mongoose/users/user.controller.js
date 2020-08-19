@@ -63,23 +63,23 @@ class UserController {
 
   async _loginUser(req, res, next) {
     try {
-      const { email, password } = req.body;
+      const { email, password, subscription } = req.body;
       const token = await this.checkUser(email, password);
       return res.status(200).json({
         token: token,
         user: {
-          email: user.email,
-          subscription: user.subscription,
+          email: email,
+          subscription: subscription,
         },
       });
     } catch (err) {
       next(err);
     }
   }
-  async checkUser() {
+  async checkUser(email, password) {
     const user = await userModel.findUserByEmail(email);
     if (!user || user.status !== "Verified") {
-      return res.status(401).send("Email or password is wrong");
+      throw new UnauthorizedError("Email or password is wrong");
     }
     const isPasswordValid = await bcryptjs.compare(password, user.password);
 
@@ -202,10 +202,13 @@ class UserController {
 
   async verifyEmail(req, res, next) {
     try {
-      const { token } = req.params;
-      const userToVerify = await userModel.findByVerificationToken(token);
+      const { verificationToken } = req.params;
+      console.log("token", verificationToken);
+      const userToVerify = await userModel.findByVerificationToken(
+        verificationToken
+      );
       if (!userToVerify) {
-        throw new NotFoundError("User not found");
+        res.status(402).send("cancel");
       }
       userModel.verifyUser(userToVerify._id);
       return res.status(200).send("OK");
@@ -253,7 +256,7 @@ class UserController {
       from: "smdeile@gmail.com",
       subject: "Sending verification token",
       text: "and easy to do anywhere, even with Node.js",
-      html: `<a href='http://localhost:3000/auth/verify/:${verificationToken}'></a>`,
+      html: `<a href='http://localhost:3000/auth/verify/${verificationToken}'>Click this link</a>`,
     };
     const send = await sgMail.send(msg);
     console.log("send", send);
