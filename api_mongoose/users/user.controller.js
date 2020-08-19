@@ -1,9 +1,12 @@
 const Joi = require("@hapi/joi");
 const Avatar = require("avatar-builder");
 const path = require("path");
-const fs = require("fs");
-
+const fs = require("fs").promises;
+const uuid = require("uuid");
+const sgMail = require("@sendgrid/mail");
+require("dotenv").config({ path: path.join(__dirname, "..", "..", ".env") });
 const userModel = require("./user.model");
+
 const {
   Types: { ObjectId },
 } = require("mongoose");
@@ -30,6 +33,7 @@ class UserController {
     console.log(userForResponse);
     return res.status(200).json(userForResponse);
   }
+
   async _createUser(req, res, next) {
     try {
       const { email, password, subscription, token } = req.body;
@@ -44,34 +48,23 @@ class UserController {
         subscription,
         token,
       });
+      await this.sendVerificationEmail(user);
       return res.status(201).json({
         user: {
           email: user.email,
           subscription: user.subscription,
-          avatar: user.avatarURL,
+          avatar: `http://localhost:3000/images/${user.email}.png`,
         },
       });
     } catch (err) {
       next(err);
     }
   }
+
   async _loginUser(req, res, next) {
     try {
       const { email, password } = req.body;
-      const user = await userModel.findUserByEmail(email);
-
-      if (!user) {
-        return res.status(401).send("Email or password is wrong");
-      }
-      const isPasswordValid = await bcryptjs.compare(password, user.password);
-
-      if (!isPasswordValid) {
-        return res.status(401).send("Email or password is wrong");
-      }
-      const token = await jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-        expiresIn: 2 * 24 * 60 * 60,
-      });
-      await userModel.updateToken(user._id, token);
+      const token = await this.checkUser(email, password);
       return res.status(200).json({
         token: token,
         user: {
@@ -83,6 +76,22 @@ class UserController {
       next(err);
     }
   }
+  async checkUser() {
+    const user = await userModel.findUserByEmail(email);
+    if (!user || user.status !== "Verified") {
+      return res.status(401).send("Email or password is wrong");
+    }
+    const isPasswordValid = await bcryptjs.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).send("Email or password is wrong");
+    }
+    const token = await jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: 2 * 24 * 60 * 60,
+    });
+    await userModel.updateToken(user._id, token);
+    return token;
+  }
   async logout(req, res, next) {
     try {
       const user = req.user;
@@ -93,6 +102,7 @@ class UserController {
       next(err);
     }
   }
+
   async authorize(req, res, next) {
     try {
       // 1. витягнути токен користувача з заголовка Authorization
@@ -119,44 +129,91 @@ class UserController {
       // і передати обробку запиту на наступний middleware
       req.user = user;
       req.token = token;
-      console.log("tok", token);
+
       next();
     } catch (err) {
       next(err);
     }
   }
 
+  async updateAvatar(req, res, next) {
+    try {
+      const user = req.user;
+      const userAvatar = await userModel.findUserByEmail(user.email);
+      const { email } = userAvatar;
+      const destinationFolder = path.join(
+        __dirname,
+        "..",
+        "public/images",
+        email + ".png"
+      );
+      console.log("pass");
+      try {
+        await fs.unlink(userAvatar.avatarURL);
+      } catch (error) {
+        console.log(error.message);
+      }
+
+      const updatedUser = await userModel.findUserByIdAndUpdate(user._id, {
+        avatarURL: destinationFolder,
+      });
+
+      if (!updatedUser) {
+        return res.status(404).json("Not Found contact");
+      }
+
+      return res.status(200).json({ avatarURL: updatedUser });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async replaceAvatar(req, res, next) {
-    console.log("req replace", req.body);
     const { email } = req.body;
     const generalAvatar = Avatar.builder(
       Avatar.Image.margin(Avatar.Image.circleMask(Avatar.Image.identicon())),
       128,
       128
     );
-    const pathAvatar = path.join(__dirname, "tmp", email + ".png");
-    console.log(pathAvatar);
-    const avatar = await generalAvatar
-      .create(email)
-      .then((buffer) => fs.writeFileSync(pathAvatar, buffer));
+    const pathAvatar = path.join(
+      __dirname,
+      "..",
+      "public/temp",
+      email + ".png"
+    );
+    const avatar = await generalAvatar.create(email);
+    await fs.writeFile(pathAvatar, avatar);
 
     const destinationFolder = path.join(
       __dirname,
 
       "..",
-      "public/image",
+      "public/images",
       email + ".png"
     );
-    console.log("destinationFolder", destinationFolder);
 
     fs.copyFile(pathAvatar, destinationFolder, (err) => {
       if (err) console.log("err", err);
-      console.log("source.txt was copied to destination.txt");
     });
-    await fs.promises.unlink(pathAvatar);
+    await fs.unlink(pathAvatar);
 
     next();
   }
+
+  async verifyEmail(req, res, next) {
+    try {
+      const { token } = req.params;
+      const userToVerify = await userModel.findByVerificationToken(token);
+      if (!userToVerify) {
+        throw new NotFoundError("User not found");
+      }
+      userModel.verifyUser(userToVerify._id);
+      return res.status(200).send("OK");
+    } catch (err) {
+      next(err);
+    }
+  }
+
   validateCreateUser(req, res, next) {
     const registrationRules = Joi.object({
       email: Joi.string().required(),
@@ -185,6 +242,21 @@ class UserController {
       const { email, subscription } = user;
       return { email, subscription };
     });
+  }
+  async sendVerificationEmail(user) {
+    const verificationToken = uuid.v4();
+
+    await userModel.createVerificationToken(user._id, verificationToken);
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    const msg = {
+      to: user.email,
+      from: "smdeile@gmail.com",
+      subject: "Sending verification token",
+      text: "and easy to do anywhere, even with Node.js",
+      html: `<a href='http://localhost:3000/auth/verify/:${verificationToken}'></a>`,
+    };
+    const send = await sgMail.send(msg);
+    console.log("send", send);
   }
 }
 module.exports = new UserController();
