@@ -23,9 +23,11 @@ const userSchema = new Schema({
 userSchema.statics.findUserByEmail = findUserByEmail;
 userSchema.statics.findUserByIdAndUpdate = findUserByIdAndUpdate;
 userSchema.statics.updateToken = updateToken;
+
 userSchema.statics.createVerificationToken = createVerificationToken;
 userSchema.statics.findByVerificationToken = findByVerificationToken;
 userSchema.statics.verifyUser = verifyUser;
+
 
 async function findUserByEmail(email) {
   return this.findOne({ email });

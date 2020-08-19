@@ -2,9 +2,11 @@ const Joi = require("@hapi/joi");
 const Avatar = require("avatar-builder");
 const path = require("path");
 const fs = require("fs").promises;
+
 const uuid = require("uuid");
 const sgMail = require("@sendgrid/mail");
 require("dotenv").config({ path: path.join(__dirname, "..", "..", ".env") });
+
 const userModel = require("./user.model");
 
 const {
@@ -63,8 +65,10 @@ class UserController {
 
   async _loginUser(req, res, next) {
     try {
+
       const { email, password, subscription } = req.body;
       const token = await this.checkUser(email, password);
+
       return res.status(200).json({
         token: token,
         user: {
@@ -105,6 +109,7 @@ class UserController {
 
   async authorize(req, res, next) {
     try {
+      console.log("Content-Type", req.get("Content-Type"));
       // 1. витягнути токен користувача з заголовка Authorization
       const authorizationHeader = req.get("Authorization");
       const token = authorizationHeader.replace("Bearer ", "");
@@ -139,6 +144,7 @@ class UserController {
   async updateAvatar(req, res, next) {
     try {
       const user = req.user;
+
       const userAvatar = await userModel.findUserByEmail(user.email);
       const { email } = userAvatar;
       const destinationFolder = path.join(
@@ -147,7 +153,7 @@ class UserController {
         "public/images",
         email + ".png"
       );
-      console.log("pass");
+
       try {
         await fs.unlink(userAvatar.avatarURL);
       } catch (error) {
@@ -155,14 +161,18 @@ class UserController {
       }
 
       const updatedUser = await userModel.findUserByIdAndUpdate(user._id, {
+
         avatarURL: destinationFolder,
+
       });
 
       if (!updatedUser) {
         return res.status(404).json("Not Found contact");
       }
 
+
       return res.status(200).json({ avatarURL: updatedUser });
+
     } catch (err) {
       next(err);
     }
@@ -175,12 +185,14 @@ class UserController {
       128,
       128
     );
+
     const pathAvatar = path.join(
       __dirname,
       "..",
       "public/temp",
       email + ".png"
     );
+
     const avatar = await generalAvatar.create(email);
     await fs.writeFile(pathAvatar, avatar);
 
@@ -199,6 +211,7 @@ class UserController {
 
     next();
   }
+
 
   async verifyEmail(req, res, next) {
     try {

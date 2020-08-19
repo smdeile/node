@@ -12,7 +12,9 @@ const storage = multer.diskStorage({
     cb(null, Date.now() + ext);
   },
 });
+
 const upload = multer({ dest: storage });
+
 
 userRouter.post(
   "/register",
@@ -37,6 +39,8 @@ userRouter.patch(
   upload.single("avatar"),
   userController.updateAvatar
 );
+
 userRouter.get("/verify/:verificationToken", userController.verifyEmail);
+
 
 module.exports = userRouter;
