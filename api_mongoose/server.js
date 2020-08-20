@@ -34,7 +34,12 @@ module.exports = class UserServer {
   }
 
   async initDatabase() {
-    await mongoose.connect(process.env.MONGODB_URL);
+    mongoose.set("useUnifiedTopology", true);
+
+    await mongoose.connect(process.env.MONGODB_URL, {
+      useNewUrlParser: true,
+    });
+    mongoose.set("useFindAndModify", false);
   }
 
   async startListening() {

@@ -3,7 +3,12 @@ const Avatar = require("avatar-builder");
 const path = require("path");
 const fs = require("fs").promises;
 
+const uuid = require("uuid");
+const sgMail = require("@sendgrid/mail");
+require("dotenv").config({ path: path.join(__dirname, "..", "..", ".env") });
+
 const userModel = require("./user.model");
+
 const {
   Types: { ObjectId },
 } = require("mongoose");
@@ -45,6 +50,7 @@ class UserController {
         subscription,
         token,
       });
+      await this.sendVerificationEmail(user);
       return res.status(201).json({
         user: {
           email: user.email,
@@ -59,31 +65,36 @@ class UserController {
 
   async _loginUser(req, res, next) {
     try {
-      const { email, password } = req.body;
-      const user = await userModel.findUserByEmail(email);
-      console.log("user", user);
-      if (!user) {
-        return res.status(401).send("Email or password is wrong");
-      }
-      const isPasswordValid = await bcryptjs.compare(password, user.password);
 
-      if (!isPasswordValid) {
-        return res.status(401).send("Email or password is wrong");
-      }
-      const token = await jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-        expiresIn: 2 * 24 * 60 * 60,
-      });
-      await userModel.updateToken(user._id, token);
+      const { email, password, subscription } = req.body;
+      const token = await this.checkUser(email, password);
+
       return res.status(200).json({
         token: token,
         user: {
-          email: user.email,
-          subscription: user.subscription,
+          email: email,
+          subscription: subscription,
         },
       });
     } catch (err) {
       next(err);
     }
+  }
+  async checkUser(email, password) {
+    const user = await userModel.findUserByEmail(email);
+    if (!user || user.status !== "Verified") {
+      throw new UnauthorizedError("Email or password is wrong");
+    }
+    const isPasswordValid = await bcryptjs.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).send("Email or password is wrong");
+    }
+    const token = await jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: 2 * 24 * 60 * 60,
+    });
+    await userModel.updateToken(user._id, token);
+    return token;
   }
   async logout(req, res, next) {
     try {
@@ -135,6 +146,14 @@ class UserController {
       const user = req.user;
 
       const userAvatar = await userModel.findUserByEmail(user.email);
+      const { email } = userAvatar;
+      const destinationFolder = path.join(
+        __dirname,
+        "..",
+        "public/images",
+        email + ".png"
+      );
+
       try {
         await fs.unlink(userAvatar.avatarURL);
       } catch (error) {
@@ -142,14 +161,18 @@ class UserController {
       }
 
       const updatedUser = await userModel.findUserByIdAndUpdate(user._id, {
-        avatarURL: req.file.path,
+
+        avatarURL: destinationFolder,
+
       });
 
       if (!updatedUser) {
         return res.status(404).json("Not Found contact");
       }
 
-      return res.status(200).json({ avatarURL: updatedUser.avatarURL });
+
+      return res.status(200).json({ avatarURL: updatedUser });
+
     } catch (err) {
       next(err);
     }
@@ -162,7 +185,14 @@ class UserController {
       128,
       128
     );
-    const pathAvatar = path.join(__dirname, "tmp", email + ".png");
+
+    const pathAvatar = path.join(
+      __dirname,
+      "..",
+      "public/temp",
+      email + ".png"
+    );
+
     const avatar = await generalAvatar.create(email);
     await fs.writeFile(pathAvatar, avatar);
 
@@ -173,15 +203,31 @@ class UserController {
       "public/images",
       email + ".png"
     );
-    console.log("destinationFolder", destinationFolder);
 
     fs.copyFile(pathAvatar, destinationFolder, (err) => {
       if (err) console.log("err", err);
-      console.log("source.txt was copied to destination.txt");
     });
     await fs.unlink(pathAvatar);
 
     next();
+  }
+
+
+  async verifyEmail(req, res, next) {
+    try {
+      const { verificationToken } = req.params;
+      console.log("token", verificationToken);
+      const userToVerify = await userModel.findByVerificationToken(
+        verificationToken
+      );
+      if (!userToVerify) {
+        res.status(402).send("cancel");
+      }
+      userModel.verifyUser(userToVerify._id);
+      return res.status(200).send("OK");
+    } catch (err) {
+      next(err);
+    }
   }
 
   validateCreateUser(req, res, next) {
@@ -212,6 +258,21 @@ class UserController {
       const { email, subscription } = user;
       return { email, subscription };
     });
+  }
+  async sendVerificationEmail(user) {
+    const verificationToken = uuid.v4();
+
+    await userModel.createVerificationToken(user._id, verificationToken);
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    const msg = {
+      to: user.email,
+      from: "smdeile@gmail.com",
+      subject: "Sending verification token",
+      text: "and easy to do anywhere, even with Node.js",
+      html: `<a href='http://localhost:3000/auth/verify/${verificationToken}'>Click this link</a>`,
+    };
+    const send = await sgMail.send(msg);
+    console.log("send", send);
   }
 }
 module.exports = new UserController();
